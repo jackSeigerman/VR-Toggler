@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>VR Toggler</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 30px;
+      color: #2d3748;
+      text-align: center;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      border: none;
+      border-radius: 14px;
+      padding: 18px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+      position: relative;
+      overflow: hidden;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.secondary {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      color: #2d3748;
+      box-shadow: 0 4px 15px rgba(168, 237, 234, 0.3);
+    }
+    
+    button.secondary:hover {
+      box-shadow: 0 6px 20px rgba(168, 237, 234, 0.4);
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+      color: #2d3748;
+      box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
+    }
+    
+    button.danger:hover {
+      box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+    }
+    
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    button:hover::before {
+      left: 100%;
+    }
+    
+    #status {
+      font-size: 14px;
+      color: #718096;
+      margin-top: 25px;
+      text-align: center;
+      min-height: 24px;
+      padding: 12px;
+      background: rgba(113, 128, 150, 0.1);
+      border-radius: 10px;
+      border-left: 4px solid #4facfe;
+    }
+    
+    .icon {
+      margin-right: 10px;
+      font-size: 18px;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 VR Toggler</h1>
+    <div class="button-group">
+      <button onclick="toggleFolder()">
+        <span class="icon">🔄</span>
+        Switch to Other Mode
+      </button>
+      <button class="secondary" onclick="chooseFolder()">
+        <span class="icon">📁</span>
+        Choose SteamVR Folder
+      </button>
+      <button class="danger" onclick="exitApp()">
+        <span class="icon">🚪</span>
+        Exit Application
+      </button>
+    </div>
+    <div id="status"></div>
+  </div>
+  
+  <script>
+    const { ipcRenderer } = require('electron');
+    
+    function toggleFolder() {
+      ipcRenderer.send('toggle-folder');
+      // Add visual feedback
+      const btn = event.target.closest('button');
+      btn.classList.add('pulse');
+      setTimeout(() => btn.classList.remove('pulse'), 1000);
+    }
+    
+    function chooseFolder() {
+      ipcRenderer.send('choose-folder');
+    }
+    
+    function exitApp() {
+      ipcRenderer.send('exit-app');
+    }
+    
+    ipcRenderer.on('status', (event, message) => {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      
+      // Add a subtle animation when status updates
+      statusEl.style.opacity = '0';
+      setTimeout(() => {
+        statusEl.style.opacity = '1';
+      }, 100);
+    });
+  </script>
+</body>
+</html>
