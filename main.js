@@ -3,12 +3,35 @@ const path = require('path');
 const fs = require('fs');
 let tray = null;
 let win = null;
-let steamvrPath = null; // This holds current selected path (not persisted)
+let steamvrPath = null;
+
+// Path to store the configuration in the same directory as the app
+const configPath = path.join(__dirname, 'config.json');
+
+function loadConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      steamvrPath = config.steamvrPath;
+    }
+  } catch (err) {
+    console.error('Error loading config:', err);
+  }
+}
+
+function saveConfig() {
+  try {
+    const config = { steamvrPath };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  } catch (err) {
+    console.error('Error saving config:', err);
+  }
+}
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 600,
-    height: 480,
+    width: 300,
+    height: 350,
     show: false,
     resizable: false,
     icon: path.join(__dirname, 'icon.ico'),
@@ -86,10 +109,9 @@ function toggleFolder() {
   try {
     fs.renameSync(steamvrPath, newPath);
     steamvrPath = newPath;
+    saveConfig(); // Save the config when path changes
     updateTrayMenu(); // Update the tray menu after toggling
-    if (win) win.webContents.send('status', `Renamed to ${newName}`);
   } catch (err) {
-    if (win) win.webContents.send('status', `Error: ${err.message}`);
   }
 }
 
@@ -104,6 +126,7 @@ ipcMain.on('choose-folder', async () => {
   });
   if (!result.canceled && result.filePaths.length > 0) {
     steamvrPath = result.filePaths[0];
+    saveConfig(); // Save the config when folder is selected
     updateTrayMenu(); // Update the tray menu when folder is set
     win.webContents.send('status', `Folder set to ${steamvrPath}`);
   }
@@ -115,6 +138,7 @@ ipcMain.on('exit-app', () => {
 });
 
 app.whenReady().then(() => {
+  loadConfig(); // Load saved configuration on startup
   createWindow();
   createTray();
 });
