@@ -111,7 +111,9 @@ function toggleFolder() {
     steamvrPath = newPath;
     saveConfig(); // Save the config when path changes
     updateTrayMenu(); // Update the tray menu after toggling
+  if (win) win.webContents.send('status', `Renamed to ${newName}`);
   } catch (err) {
+    if (win) win.webContents.send('status', `Error: ${err.message}`);
   }
 }
 
