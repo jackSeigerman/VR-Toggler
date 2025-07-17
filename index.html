@@ -102,30 +102,42 @@
       font-size: 16px;
     }
     
-    #status {
-      font-size: 13px;
-      color: #6b7280;
-      margin-top: 20px;
-      text-align: center;
-      padding: 12px;
-      background: #f9fafb;
-      border-radius: 6px;
-      border: 1px solid #f3f4f6;
-      min-height: 20px;
-    }
-    
-    #status:empty {
-      display: none;
-    }
+   #status {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #374151;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  max-width: 280px;
+  text-align: center;
+}
+
+#status.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+#status:empty {
+  display: none;
+}
   </style>
 </head>
 <body>
 
    
     <div class="button-group">
-      <button class="primary" onclick="toggleFolder()">
+      <button id="toggleBtn" class="primary" onclick="toggleFolder()">
         <span class="icon">🔄</span>
-        Switch to Other Mode
+        <span id="toggleText">Switch to Other Mode</span>
       </button>
       <button onclick="chooseFolder()">
         <span class="icon">📁</span>
@@ -154,9 +166,30 @@
       ipcRenderer.send('exit-app');
     }
     
+    // Add this new handler to update the button text
+    ipcRenderer.on('update-button', (event, mode) => {
+      const toggleTextEl = document.getElementById('toggleText');
+      toggleTextEl.textContent = `Switch to ${mode}`;
+    });
+
+    // Update the existing status handler to also request button update
     ipcRenderer.on('status', (event, message) => {
       const statusEl = document.getElementById('status');
       statusEl.textContent = message;
+      statusEl.classList.add('show');
+      
+      // Hide after 3 seconds
+      setTimeout(() => {
+        statusEl.classList.remove('show');
+      }, 3000);
+      
+      // Request button text update after status change
+      ipcRenderer.send('request-button-update');
+    });
+
+    // Request initial button text when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      ipcRenderer.send('request-button-update');
     });
   </script>
 </body>

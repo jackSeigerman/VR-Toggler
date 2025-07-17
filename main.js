@@ -70,14 +70,14 @@ function updateTrayMenu() {
   const canToggle = steamvrPath && fs.existsSync(steamvrPath);
   
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Open App', click: () => win.show() },
-    { type: 'separator' },
-    { 
+        { 
       label: canToggle ? `Switch to ${otherMode}` : 'Set folder path first',
       enabled: canToggle,
       click: () => toggleFolder()
     },
     { type: 'separator' },
+    { label: 'Open App', click: () => win.show() },
+
     { label: 'Quit', click: () => {
       tray.destroy();
       app.quit();
@@ -94,28 +94,15 @@ function createTray() {
   tray.on('double-click', () => win.show());
 }
 
-function toggleFolder() {
-  if (!steamvrPath || !fs.existsSync(steamvrPath)) {
-    if (win) win.webContents.send('status', 'Folder not set or does not exist');
-    return;
+
+
+// Add this new handler to send button text updates
+ipcMain.on('request-button-update', () => {
+  if (win) {
+    const otherMode = getOtherMode();
+    win.webContents.send('update-button', otherMode);
   }
-  
-  const dirname = path.dirname(steamvrPath);
-  const basename = path.basename(steamvrPath);
-  const isDisabled = basename.endsWith('_');
-  const newName = isDisabled ? basename.slice(0, -1) : basename + '_';
-  const newPath = path.join(dirname, newName);
-  
-  try {
-    fs.renameSync(steamvrPath, newPath);
-    steamvrPath = newPath;
-    saveConfig(); // Save the config when path changes
-    updateTrayMenu(); // Update the tray menu after toggling
-  if (win) win.webContents.send('status', `Renamed to ${newName}`);
-  } catch (err) {
-    if (win) win.webContents.send('status', `Error: ${err.message}`);
-  }
-}
+});
 
 // Handle messages from HTML
 ipcMain.on('toggle-folder', () => {
