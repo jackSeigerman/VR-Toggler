@@ -1,6 +1,7 @@
-const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, Notification, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 let tray = null;
 let win = null;
 let steamvrPath = null;
@@ -9,8 +10,30 @@ let steamvrPath = null;
 const configPath = path.join(__dirname, 'config.json');
 
 
+// Add this function to check if we need admin privileges
+function needsAdminPrivileges() {
+  if (!steamvrPath) return false;
+  
+  // Check if SteamVR is in Program Files (typically requires admin)
+  const programFiles = ['C:\\Program Files', 'C:\\Program Files (x86)'];
+  return programFiles.some(pf => steamvrPath.toLowerCase().startsWith(pf.toLowerCase()));
+}
 
-
+// Add this function to restart with admin privileges
+function restartAsAdmin() {
+  const exePath = process.execPath;
+  const args = process.argv.slice(1);
+  
+  // Use PowerShell to restart with admin privileges
+  const psCommand = `Start-Process -FilePath "${exePath}" -ArgumentList "${args.join(' ')}" -Verb RunAs`;
+  
+  spawn('powershell', ['-Command', psCommand], {
+    detached: true,
+    stdio: 'ignore'
+  });
+  
+  app.quit();
+}
 
 
     
@@ -188,13 +211,30 @@ function toggleFolder() {
     
     // Check for permission-related errors
     if (err.code === 'EPERM' || err.code === 'EACCES') {
-      errorMessage = 'Permission denied. Please run as administrator or move SteamVR to a different location.';
+      if (needsAdminPrivileges()) {
+        // Show dialog asking to restart as admin
+        const result = dialog.showMessageBoxSync({
+          type: 'question',
+          title: 'Administrator Rights Required',
+          message: 'This operation requires administrator privileges.',
+          detail: 'Would you like to restart the application with administrator rights?',
+          buttons: ['Restart as Admin', 'Cancel'],
+          defaultId: 0
+        });
+        
+        if (result === 0) {
+          restartAsAdmin();
+          return;
+        }
+      }
+      errorMessage = 'Permission denied. Please run as administrator.';
+    } else if (err.code === 'EBUSY') {
+      errorMessage = 'Folder is in use. Please close Steam/SteamVR and try again.';
     }
     
     if (win) win.webContents.send('status', errorMessage);
   }
 }
-
 
 // Add this new handler to send button text updates
 ipcMain.on('request-button-update', () => {
