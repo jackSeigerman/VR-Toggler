@@ -156,8 +156,8 @@ function createWindow() {
   });
   win.loadFile('index.html');
   win.on('close', (e) => {
-  tray.destroy();
-  app.quit();
+  e.preventDefault();
+  win.hide();
 });
 }
 function getCurrentMode() {
