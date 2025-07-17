@@ -93,7 +93,33 @@ function createTray() {
   updateTrayMenu();
   tray.on('double-click', () => win.show());
 }
-
+function toggleFolder() {
+  if (!steamvrPath || !fs.existsSync(steamvrPath)) {
+    if (win) win.webContents.send('status', 'Folder not set or does not exist');
+    return;
+  }
+  
+  const dirname = path.dirname(steamvrPath);
+  const basename = path.basename(steamvrPath);
+  const isDisabled = basename.endsWith('_');
+  const newName = isDisabled ? basename.slice(0, -1) : basename + '_';
+  const newPath = path.join(dirname, newName);
+  
+  try {
+    fs.renameSync(steamvrPath, newPath);
+    steamvrPath = newPath;
+    saveConfig();
+    updateTrayMenu();
+    if (win) {
+      win.webContents.send('status', `Renamed to ${newName}`);
+      // Send button update after successful toggle
+      const otherMode = getOtherMode();
+      win.webContents.send('update-button', otherMode);
+    }
+  } catch (err) {
+    if (win) win.webContents.send('status', `Error: ${err.message}`);
+  }
+}
 
 
 // Add this new handler to send button text updates
