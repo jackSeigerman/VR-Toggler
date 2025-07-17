@@ -9,6 +9,21 @@ let steamvrPath = null;
 // Path to store the configuration in the same directory as the app
 const configPath = path.join(__dirname, 'config.json');
 
+// Single instance check
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window instead
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+  });
+}
 
 // Add this function to check if we need admin privileges
 function needsAdminPrivileges() {
@@ -19,24 +34,6 @@ function needsAdminPrivileges() {
   return programFiles.some(pf => steamvrPath.toLowerCase().startsWith(pf.toLowerCase()));
 }
 
-// Add this function to restart with admin privileges
-function restartAsAdmin() {
-  const exePath = process.execPath;
-  const args = process.argv.slice(1);
-  
-  // Use PowerShell to restart with admin privileges
-  const psCommand = `Start-Process -FilePath "${exePath}" -ArgumentList "${args.join(' ')}" -Verb RunAs`;
-  
-  spawn('powershell', ['-Command', psCommand], {
-    detached: true,
-    stdio: 'ignore'
-  });
-  
-  app.quit();
-}
-
-
-    
 function loadConfig() {
   try {
     let configExists = false;
@@ -45,6 +42,32 @@ function loadConfig() {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       steamvrPath = config.steamvrPath;
       configExists = true;
+      
+      // If we have a saved path, check if it exists, and if not, try to find it with/without underscore
+      if (steamvrPath && !fs.existsSync(steamvrPath)) {
+        const dirname = path.dirname(steamvrPath);
+        const basename = path.basename(steamvrPath);
+        
+        // Try to find the folder with or without underscore
+        let alternativePath;
+        if (basename.endsWith('_')) {
+          // If saved path ends with _, try without _
+          alternativePath = path.join(dirname, basename.slice(0, -1));
+        } else {
+          // If saved path doesn't end with _, try with _
+          alternativePath = path.join(dirname, basename + '_');
+        }
+        
+        if (fs.existsSync(alternativePath)) {
+          steamvrPath = alternativePath;
+          saveConfig(); // Update the config with the found path
+          console.log('Found SteamVR folder at alternative path:', steamvrPath);
+        } else {
+          // Neither path exists, reset steamvrPath
+          steamvrPath = null;
+          console.log('SteamVR folder not found at saved path or alternative path');
+        }
+      }
     }
     
    // Only try to find the folder automatically if config doesn't exist or steamvrPath is empty
