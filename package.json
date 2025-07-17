@@ -7,6 +7,7 @@
     "package-win": "electron-packager . VRToggler --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite"
   },
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-packager": "^17.1.2"
   }
 }
