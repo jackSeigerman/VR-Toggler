@@ -102,53 +102,97 @@
       font-size: 16px;
     }
     
-   #status {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #374151;
-  color: white;
-  padding: 12px 20px;
+    #status {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #374151;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    max-width: 280px;
+    text-align: center;
+  }
+
+  #status.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  #status:empty {
+    display: none;
+  }
+
+  .toggle-container {
+  padding: 14px 20px;
+  background: #f8f9fa;
+  border: 1px solid #e1e5e9;
   border-radius: 8px;
-  font-size: 13px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-  z-index: 1000;
-  max-width: 280px;
-  text-align: center;
+  margin: 0;
 }
 
-#status.show {
-  opacity: 1;
-  visibility: visible;
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
 }
 
-#status:empty {
-  display: none;
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
+
+.toggle-text {
+  flex: 1;
+}
+
   </style>
 </head>
 <body>
 
-   
-    <div class="button-group">
-      <button id="toggleBtn" class="primary" onclick="toggleFolder()">
-        <span class="icon">🔄</span>
-        <span id="toggleText">Switch to Other Mode</span>
-      </button>
-      <button onclick="chooseFolder()">
-        <span class="icon">📁</span>
-        Choose SteamVR Folder
-      </button>
-      <button class="secondary" onclick="exitApp()">
-        <span class="icon">✕</span>
-        Exit
-      </button>
-    </div>
-    <div id="status"></div>
+   <div id="mainView" class="button-group">
+  <button id="toggleBtn" class="primary" onclick="toggleFolder()">
+    <span class="icon">🔄</span>
+    <span id="toggleText">Switch to Other Mode</span>
+  </button>
+  <button onclick="showSettings()">
+    <span class="icon">⚙️</span>
+    Settings
+  </button>
+  <button class="secondary" onclick="exitApp()">
+    <span class="icon">✕</span>
+    Exit
+  </button>
+</div>
+
+<div id="settingsView" class="button-group" style="display: none;">
+  <button onclick="chooseFolder()">
+    <span class="icon">📁</span>
+    Choose SteamVR Folder
+  </button>
+  <div class="toggle-container">
+    <label class="toggle-label">
+      <input type="checkbox" id="autoLaunchToggle" onchange="toggleAutoLaunch()">
+      <span class="toggle-text">Auto launch on startup</span>
+    </label>
+  </div>
+  <button onclick="showMain()">
+    <span class="icon">←</span>
+    Back
+  </button>
+</div>
 
   
   <script>
@@ -190,6 +234,28 @@
     // Request initial button text when page loads
     window.addEventListener('DOMContentLoaded', () => {
       ipcRenderer.send('request-button-update');
+    });
+
+    function showSettings() {
+      document.getElementById('mainView').style.display = 'none';
+      document.getElementById('settingsView').style.display = 'flex';
+      // Request current auto-launch status
+      ipcRenderer.send('get-auto-launch-status');
+    }
+
+    function showMain() {
+      document.getElementById('settingsView').style.display = 'none';
+      document.getElementById('mainView').style.display = 'flex';
+    }
+
+    function toggleAutoLaunch() {
+      const isChecked = document.getElementById('autoLaunchToggle').checked;
+      ipcRenderer.send('set-auto-launch', isChecked);
+    }
+
+    // Handle auto-launch status update
+    ipcRenderer.on('auto-launch-status', (event, isEnabled) => {
+      document.getElementById('autoLaunchToggle').checked = isEnabled;
     });
   </script>
 </body>

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 let tray = null;
@@ -7,13 +7,33 @@ let steamvrPath = null;
 
 // Path to store the configuration in the same directory as the app
 const configPath = path.join(__dirname, 'config.json');
-
 function loadConfig() {
   try {
+    let configExists = false;
+    
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       steamvrPath = config.steamvrPath;
+      configExists = true;
     }
+    
+    // Only try to find the folder automatically if config doesn't exist or steamvrPath is empty
+    if (!configExists || !steamvrPath) {
+      const steamCommonPath = 'C:\\Program Files (x86)\\Steam\\steamapps\\common';
+      const steamvrFolderPath = path.join(steamCommonPath, 'SteamVR');
+      
+      if (fs.existsSync(steamvrFolderPath)) {
+        steamvrPath = steamvrFolderPath;
+        saveConfig(); // Save the auto-discovered path
+        console.log('SteamVR folder found automatically:', steamvrPath);
+      } else {
+        // Show popup if SteamVR folder is not found
+        showSteamVRNotFoundDialog();
+      }
+    }
+    
+    // Update tray menu after config is loaded
+    updateTrayMenu();
   } catch (err) {
     console.error('Error loading config:', err);
   }
@@ -26,6 +46,29 @@ function saveConfig() {
   } catch (err) {
     console.error('Error saving config:', err);
   }
+}
+function showSteamVRNotFoundDialog() {
+  // Wait for app to be ready before showing dialog
+  app.whenReady().then(() => {
+    const result = dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'SteamVR Folder Not Found',
+      message: 'SteamVR folder not found in the default Steam location.',
+      detail: 'Please manually select your SteamVR folder through the Settings menu.',
+      buttons: ['OK', 'Browse Now'],
+      defaultId: 0
+    });
+    
+    if (result === 1) { // User clicked "Browse Now"
+      // Show the main window and open settings
+      if (win) {
+        win.show();
+        win.webContents.once('dom-ready', () => {
+          win.webContents.executeJavaScript('showSettings();');
+        });
+      }
+    }
+  });
 }
 
 function createWindow() {
@@ -110,6 +153,18 @@ function toggleFolder() {
     steamvrPath = newPath;
     saveConfig();
     updateTrayMenu();
+    
+    // Determine the new mode for notification
+    const newMode = isDisabled ? 'VR Mode' : 'Desktop Mode';
+    
+    // Show Windows notification
+    const notification = new Notification({
+      title: 'SteamVR Toggler',
+      body: `Switched to ${newMode}`,
+      icon: path.join(__dirname, 'icon.ico')
+    });
+    notification.show();
+    
     if (win) {
       win.webContents.send('status', `Renamed to ${newName}`);
       // Send button update after successful toggle
@@ -152,8 +207,27 @@ ipcMain.on('exit-app', () => {
   app.quit();
 });
 
+ipcMain.on('get-auto-launch-status', () => {
+  if (win) {
+    const isEnabled = app.getLoginItemSettings().openAtLogin;
+    win.webContents.send('auto-launch-status', isEnabled);
+  }
+});
+
+ipcMain.on('set-auto-launch', (event, enable) => {
+  app.setLoginItemSettings({
+    openAtLogin: enable,
+    path: process.execPath
+  });
+  
+  if (win) {
+    const status = enable ? 'Auto-launch enabled' : 'Auto-launch disabled';
+    win.webContents.send('status', status);
+  }
+});
+
 app.whenReady().then(() => {
-  loadConfig(); // Load saved configuration on startup
   createWindow();
-  createTray();
+  loadConfig(); // Load config first
+  createTray(); // Create tray after config is loaded
 });
