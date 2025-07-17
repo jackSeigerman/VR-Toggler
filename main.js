@@ -7,6 +7,13 @@ let steamvrPath = null;
 
 // Path to store the configuration in the same directory as the app
 const configPath = path.join(__dirname, 'config.json');
+
+
+
+
+
+
+    
 function loadConfig() {
   try {
     let configExists = false;
@@ -96,6 +103,7 @@ function getCurrentMode() {
     return 'Unknown';
   }
   const basename = path.basename(steamvrPath);
+  // Check if it ends with underscore (disabled/desktop mode)
   return basename.endsWith('_') ? 'Desktop Mode' : 'VR Mode';
 }
 
@@ -137,6 +145,7 @@ function createTray() {
   updateTrayMenu();
   tray.on('double-click', () => win.show());
 }
+
 function toggleFolder() {
   if (!steamvrPath || !fs.existsSync(steamvrPath)) {
     if (win) win.webContents.send('status', 'Folder not set or does not exist');
@@ -174,7 +183,15 @@ function toggleFolder() {
       win.webContents.send('update-button', otherMode);
     }
   } catch (err) {
-    if (win) win.webContents.send('status', `Error: ${err.message}`);
+    console.error('Toggle error:', err);
+    let errorMessage = `Error: ${err.message}`;
+    
+    // Check for permission-related errors
+    if (err.code === 'EPERM' || err.code === 'EACCES') {
+      errorMessage = 'Permission denied. Please run as administrator or move SteamVR to a different location.';
+    }
+    
+    if (win) win.webContents.send('status', errorMessage);
   }
 }
 
@@ -200,6 +217,10 @@ ipcMain.on('choose-folder', async () => {
     steamvrPath = result.filePaths[0];
     saveConfig(); // Save the config when folder is selected
     updateTrayMenu(); // Update the tray menu when folder is set
+    // Add these lines to immediately update the button text
+    const otherMode = getOtherMode();
+    win.webContents.send('update-button', otherMode);
+    
     win.webContents.send('status', `Folder set to ${steamvrPath}`);
   }
 });
@@ -227,9 +248,19 @@ ipcMain.on('set-auto-launch', (event, enable) => {
     win.webContents.send('status', status);
   }
 });
-
 app.whenReady().then(() => {
   createWindow();
   loadConfig(); // Load config first
   createTray(); // Create tray after config is loaded
+  
+  // Ensure button text is updated once the window is ready
+  win.webContents.once('dom-ready', () => {
+    // Add a small delay to ensure everything is initialized
+    setTimeout(() => {
+      if (steamvrPath) {
+        const otherMode = getOtherMode();
+        win.webContents.send('update-button', otherMode);
+      }
+    }, 100);
+  });
 });
