@@ -156,11 +156,9 @@ function createWindow() {
   });
   win.loadFile('index.html');
   win.on('close', (e) => {
-    e.preventDefault();
-    win.hide();
-  });
-}
-
+  tray.destroy();
+  app.quit();
+});
 function getCurrentMode() {
   if (!steamvrPath || !fs.existsSync(steamvrPath)) {
     return 'Unknown';
