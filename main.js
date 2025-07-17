@@ -248,6 +248,7 @@ ipcMain.on('request-button-update', () => {
 ipcMain.on('toggle-folder', () => {
   toggleFolder();
 });
+// In the ipcMain.on('choose-folder') handler, replace the existing code with:
 
 ipcMain.on('choose-folder', async () => {
   const result = await dialog.showOpenDialog({
@@ -257,9 +258,19 @@ ipcMain.on('choose-folder', async () => {
     steamvrPath = result.filePaths[0];
     saveConfig(); // Save the config when folder is selected
     updateTrayMenu(); // Update the tray menu when folder is set
+    
     // Add these lines to immediately update the button text
     const otherMode = getOtherMode();
     win.webContents.send('update-button', otherMode);
+    
+    // Show Windows notification for folder change
+    const notification = new Notification({
+      title: 'VR Toggler',
+      body: `SteamVR folder updated to ${path.basename(steamvrPath)}`,
+      icon: path.join(__dirname, 'icon.ico'),
+      silent: true,
+    });
+    notification.show();
     
     win.webContents.send('status', `Folder set to ${steamvrPath}`);
   }
