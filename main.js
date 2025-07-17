@@ -194,7 +194,7 @@ function updateTrayMenu() {
 
     { label: 'Quit', click: () => {
       tray.destroy();
-      app.quit();
+      app.exit();
     }}
   ]);
   
