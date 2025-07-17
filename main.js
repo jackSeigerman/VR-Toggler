@@ -47,13 +47,31 @@ function loadConfig() {
       configExists = true;
     }
     
-    // Only try to find the folder automatically if config doesn't exist or steamvrPath is empty
+   // Only try to find the folder automatically if config doesn't exist or steamvrPath is empty
     if (!configExists || !steamvrPath) {
-      const steamCommonPath = 'C:\\Program Files (x86)\\Steam\\steamapps\\common';
-      const steamvrFolderPath = path.join(steamCommonPath, 'SteamVR');
+      const steamCommonPaths = [
+        'C:\\Program Files (x86)\\Steam\\steamapps\\common',
+        'C:\\Games\\Steam\\steamapps\\common'
+      ];
       
-      if (fs.existsSync(steamvrFolderPath)) {
-        steamvrPath = steamvrFolderPath;
+      let foundPath = null;
+      
+      for (const steamCommonPath of steamCommonPaths) {
+        // Check for both SteamVR and SteamVR_ folders
+        const steamvrFolderPath = path.join(steamCommonPath, 'SteamVR');
+        const steamvrDisabledFolderPath = path.join(steamCommonPath, 'SteamVR_');
+        
+        if (fs.existsSync(steamvrFolderPath)) {
+          foundPath = steamvrFolderPath;
+          break;
+        } else if (fs.existsSync(steamvrDisabledFolderPath)) {
+          foundPath = steamvrDisabledFolderPath;
+          break;
+        }
+      }
+      
+      if (foundPath) {
+        steamvrPath = foundPath;
         saveConfig(); // Save the auto-discovered path
         console.log('SteamVR folder found automatically:', steamvrPath);
       } else {
@@ -61,7 +79,6 @@ function loadConfig() {
         showSteamVRNotFoundDialog();
       }
     }
-    
     // Update tray menu after config is loaded
     updateTrayMenu();
   } catch (err) {
@@ -209,28 +226,23 @@ function toggleFolder() {
     console.error('Toggle error:', err);
     let errorMessage = `Error: ${err.message}`;
     
-    // Check for permission-related errors
-    if (err.code === 'EPERM' || err.code === 'EACCES') {
-      if (needsAdminPrivileges()) {
-        // Show dialog asking to restart as admin
-        const result = dialog.showMessageBoxSync({
-          type: 'question',
-          title: 'Administrator Rights Required',
-          message: 'This operation requires administrator privileges.',
-          detail: 'Would you like to restart the application with administrator rights?',
-          buttons: ['Restart as Admin', 'Cancel'],
-          defaultId: 0
-        });
-        
-        if (result === 0) {
-          restartAsAdmin();
-          return;
-        }
-      }
-      errorMessage = 'Permission denied. Please run as administrator.';
-    } else if (err.code === 'EBUSY') {
-      errorMessage = 'Folder is in use. Please close Steam/SteamVR and try again.';
-    }
+// Check for permission-related errors
+if (err.code === 'EPERM' || err.code === 'EACCES') {
+  if (needsAdminPrivileges()) {
+    // Show dialog informing about admin requirements
+    dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'Administrator Rights Required',
+      message: 'This operation requires administrator privileges.',
+      detail: 'Please restart the application as an administrator to perform this action.',
+      buttons: ['OK'],
+      defaultId: 0
+    });
+  }
+  errorMessage = 'Permission denied. Please run as administrator.';
+} else if (err.code === 'EBUSY') {
+  errorMessage = 'Folder is in use. Please close Steam/SteamVR and try again.';
+}
     
     if (win) win.webContents.send('status', errorMessage);
   }
