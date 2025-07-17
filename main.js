@@ -159,6 +159,7 @@ function createWindow() {
   tray.destroy();
   app.quit();
 });
+}
 function getCurrentMode() {
   if (!steamvrPath || !fs.existsSync(steamvrPath)) {
     return 'Unknown';
