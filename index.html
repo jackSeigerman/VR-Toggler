@@ -171,10 +171,6 @@
     <span class="icon">⚙️</span>
     Settings
   </button>
-  <button class="secondary" onclick="exitApp()">
-    <span class="icon">✕</span>
-    Exit
-  </button>
 </div>
 
 <div id="settingsView" class="button-group" style="display: none;">
@@ -204,10 +200,6 @@
     
     function chooseFolder() {
       ipcRenderer.send('choose-folder');
-    }
-    
-    function exitApp() {
-      ipcRenderer.send('exit-app');
     }
     
     // Add this new handler to update the button text

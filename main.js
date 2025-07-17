@@ -159,9 +159,10 @@ function toggleFolder() {
     
     // Show Windows notification
     const notification = new Notification({
-      title: 'SteamVR Toggler',
+      title: 'VR Toggler',
       body: `Switched to ${newMode}`,
-      icon: path.join(__dirname, 'icon.ico')
+      icon: path.join(__dirname, 'icon.ico'),
+      silent: true,
     });
     notification.show();
     
