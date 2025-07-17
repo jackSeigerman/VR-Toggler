@@ -73,10 +73,11 @@ function showSteamVRNotFoundDialog() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 300,
-    height: 350,
+    width: 250,
+    height: 300,
     show: false,
     resizable: false,
+     autoHideMenuBar: true,
     icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       nodeIntegration: true,
